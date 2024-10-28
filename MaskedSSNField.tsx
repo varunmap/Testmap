@@ -1,56 +1,67 @@
-// components/MaskedSSNField.tsx
-
-import React, { useState, ChangeEvent, FocusEvent } from 'react';
+// SSNInput.tsx (Business Tax ID Input)
+import React, { FC, FocusEvent, useState, ChangeEvent } from 'react';
 import { TextField, TextFieldProps } from '@mui/material';
 
-// Extend MUI's TextFieldProps to allow all native props like label, fullWidth, etc.
-interface MaskedSSNFieldProps extends Omit<TextFieldProps, 'onChange' | 'value'> {
-  value: string; // Full SSN stored internally
-  onChange: (value: string) => void; // Handler to update SSN in parent
+interface SSNInputProps extends Omit<TextFieldProps, 'onChange'> {
+  value: string;
+  onChange: (value: string) => void;
 }
 
-// Mask the first 5 digits: ***-**-6789
-const maskSSN = (ssn: string): string => {
-  if (ssn.length !== 9) return ssn; // Mask only if SSN is exactly 9 digits
-  return `***-**-${ssn.slice(5)}`;
+// Function to format Business Tax ID (EIN) for display (e.g., 12-3456789)
+const formatEIN = (ein: string) => {
+  const cleaned = ein.replace(/\D/g, ''); // Remove non-digit characters
+  const part1 = cleaned.slice(0, 2);
+  const part2 = cleaned.slice(2, 9);
+  return `${part1}-${part2}`; // Add dash after the first 2 digits
 };
 
-const MaskedSSNField: React.FC<MaskedSSNFieldProps> = ({
-  value,
-  onChange,
-  ...props
-}) => {
-  const [inputValue, setInputValue] = useState(maskSSN(value));
-  const [isMasked, setIsMasked] = useState(true); // Track if input is masked
+// Function to mask EIN, showing only the last 4 digits (e.g., **-***6789)
+const maskEIN = (ein: string) => {
+  const cleaned = ein.replace(/\D/g, ''); // Remove non-digit characters
+  if (cleaned.length < 9) return cleaned; // Show as-is if incomplete
+  return `**-***${cleaned.slice(-4)}`; // Mask everything except last 4 digits
+};
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.replace(/\D/g, ''); // Allow only digits
-    if (rawValue.length <= 9) {
-      onChange(rawValue); // Update parent state with full SSN
-      setInputValue(rawValue); // Temporarily show unmasked value
-    }
-  };
+// Function to remove dashes before sending to the backend
+const stripDashes = (ein: string) => ein.replace(/-/g, '');
 
+const SSNInput: FC<SSNInputProps> = ({ value, onChange, ...props }) => {
+  const [isMasked, setIsMasked] = useState(true); // Track masking state
+
+  // Handle blur: Mask the EIN on blur
   const handleBlur = (e: FocusEvent<HTMLInputElement>) => {
-    setIsMasked(true); // Mask input on blur
-    setInputValue(maskSSN(value));
+    setIsMasked(true);
   };
 
+  // Handle focus: Show full EIN for editing
   const handleFocus = () => {
-    setIsMasked(false); // Show full value on focus
-    setInputValue(value);
+    setIsMasked(false);
   };
+
+  // Handle input changes and update EIN value
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, ''); // Keep only digits
+    onChange(rawValue); // Send raw value to parent
+  };
+
+  // Determine the value to display: masked or formatted EIN
+  const displayValue = isMasked ? maskEIN(value) : formatEIN(value);
 
   return (
     <TextField
-      {...props} // Pass other TextField props (label, fullWidth, etc.)
-      value={isMasked ? maskSSN(value) : inputValue}
-      onChange={handleInputChange}
+      {...props}
+      fullWidth
+      variant="outlined"
+      label="Business Tax ID (EIN)"
+      value={displayValue}
       onFocus={handleFocus}
       onBlur={handleBlur}
-      inputProps={{ maxLength: 11 }} // Limit input to 9 digits (formatted as ***-**-6789)
+      onChange={handleChange}
+      inputProps={{
+        pattern: "\\d{2}-\\d{7}", // Validation pattern for EIN
+      }}
     />
   );
 };
 
-export default MaskedSSNField;
+export default SSNInput;
