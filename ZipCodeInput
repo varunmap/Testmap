@@ -1,0 +1,83 @@
+// ZipCodeInput.tsx
+
+
+
+  const [zipCode, setZipCode] = useState<string>('');
+
+  const handleZipChange = (value: string) => {
+    console.log('ZIP Code sent to backend:', value); // Raw value without dashes
+    setZipCode(value);
+  };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <ZipCodeInput
+        value={zipCode}
+        onChange={handleZipChange}
+        helperText="Enter your ZIP code (e.g., 55555 or 55555-0000)"
+        error={zipCode.length > 0 && zipCode.length !== 5 && zipCode.length !== 9}
+      />
+    </div>
+  );
+};
+import React, { FC, useState, FocusEvent, ChangeEvent } from 'react';
+import { TextField, TextFieldProps } from '@mui/material';
+
+interface ZipCodeInputProps extends Omit<TextFieldProps, 'onChange'> {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+// Function to format the ZIP code (e.g., 55555 or 55555-0000)
+const formatZipCode = (zip: string) => {
+  const cleaned = zip.replace(/\D/g, ''); // Remove non-digit characters
+
+  if (cleaned.length <= 5) {
+    return cleaned; // Format as 5-digit ZIP code
+  }
+  
+  const part1 = cleaned.slice(0, 5);
+  const part2 = cleaned.slice(5, 9);
+  return `${part1}-${part2}`; // Format as extended ZIP code (55555-0000)
+};
+
+// Function to remove dashes before sending the value to the backend
+const stripDashes = (zip: string) => zip.replace(/-/g, '');
+
+const ZipCodeInput: FC<ZipCodeInputProps> = ({ value, onChange, ...props }) => {
+  const [isFocused, setIsFocused] = useState(false); // Track focus state
+
+  // Handle focus to show the full ZIP code input
+  const handleFocus = () => setIsFocused(true);
+
+  // Handle blur to format the ZIP code nicely
+  const handleBlur = (e: FocusEvent<HTMLInputElement>) => setIsFocused(false);
+
+  // Handle input change to update the ZIP code value
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, ''); // Allow only digits
+    onChange(rawValue); // Update state with the raw value
+  };
+
+  // Determine what to display: formatted or raw ZIP code
+  const displayValue = isFocused ? value : formatZipCode(value);
+
+  return (
+    <TextField
+      {...props}
+      fullWidth
+      variant="outlined"
+      label="ZIP Code"
+      value={displayValue}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onChange={handleChange}
+      inputProps={{
+        pattern: "\\d{5}(-\\d{4})?", // Allow 5-digit or 9-digit ZIP code with a dash
+        maxLength: 10, // Max length: 5 digits + dash + 4 digits
+      }}
+    />
+  );
+};
+
+export default ZipCodeInput;
